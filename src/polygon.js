@@ -402,14 +402,54 @@ async function buildStatementHtml(zip, problem) {
     || "");
   const htmlDir = dirname(statementEntry.name);
   const blocks = [];
-  blocks.push(sectionHeading("문제"));
-  blocks.push(...await contentBlocks(zip, htmlDir, statementRoot.querySelector(".legend"), false));
-  blocks.push(sectionSpacer(), sectionHeading("입력"));
-  blocks.push(...await contentBlocks(zip, htmlDir, statementRoot.querySelector(".input-specification"), true));
-  blocks.push(sectionSpacer(), sectionHeading("출력"));
-  blocks.push(...await contentBlocks(zip, htmlDir, statementRoot.querySelector(".output-specification"), true));
+  for (const section of statementSections(statementRoot)) {
+    if (blocks.length) blocks.push(sectionSpacer());
+    blocks.push(sectionHeading(section.title));
+    blocks.push(...await contentBlocks(zip, htmlDir, section.node, section.skipLeadingBlank));
+  }
   blocks.push(exampleBoundary());
   return { title, html: compactBlocks(blocks).join("") };
+}
+
+function statementSections(statementRoot) {
+  const sections = [];
+  for (const child of statementRoot.children) {
+    if (child.classList.contains("header") || child.classList.contains("sample-tests")) continue;
+    if (child.classList.contains("legend")) {
+      sections.push({ title: "문제", node: child, skipLeadingBlank: false });
+    } else if (child.classList.contains("input-specification")) {
+      sections.push({ title: "입력", node: child, skipLeadingBlank: true });
+    } else if (child.classList.contains("output-specification")) {
+      sections.push({ title: "출력", node: child, skipLeadingBlank: true });
+    } else if (isStatementSection(child)) {
+      sections.push({
+        title: sectionTitle(child),
+        node: child,
+        skipLeadingBlank: true
+      });
+    }
+  }
+  return sections.filter(section => section.title);
+}
+
+function isStatementSection(node) {
+  if (!node || node.nodeType !== Node.ELEMENT_NODE) return false;
+  if (node.querySelector(":scope > .section-title")) return true;
+  return node.classList.contains("note") || node.classList.contains("notes");
+}
+
+function sectionTitle(node) {
+  const rawTitle = cleanTitle(node.querySelector(":scope > .section-title")?.textContent || "");
+  const normalized = rawTitle.toLowerCase();
+  if (normalized === "input") return "입력";
+  if (normalized === "output") return "출력";
+  if (normalized === "note" || normalized === "notes") return "노트";
+  return rawTitle || classTitle(node);
+}
+
+function classTitle(node) {
+  if (node.classList.contains("note") || node.classList.contains("notes")) return "노트";
+  return cleanTitle([...node.classList].join(" "));
 }
 
 function cleanTitle(value) {
@@ -421,7 +461,17 @@ async function contentBlocks(zip, htmlDir, root, skipLeadingBlank) {
   if (!root) return [];
   const blocks = [];
   let seenContent = false;
-  for (const child of root.children) {
+  for (const child of root.childNodes) {
+    if (child.nodeType === Node.TEXT_NODE) {
+      const content = convertMathText(child.textContent).replace(/\s+/g, " ").trim();
+      if (!content && skipLeadingBlank && !seenContent) continue;
+      if (content) {
+        seenContent = true;
+        blocks.push(`<p>${content}</p>`);
+      }
+      continue;
+    }
+    if (child.nodeType !== Node.ELEMENT_NODE) continue;
     if (child.classList.contains("section-title")) continue;
     const tag = child.tagName.toLowerCase();
     if (tag === "p") {
