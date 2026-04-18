@@ -89,15 +89,12 @@ function parseProblemXml(xmlText) {
   const checker = xml.querySelector("checker");
   const checkerName = checker?.getAttribute("name") || "";
   const checkerSourcePath = checker?.querySelector("source")?.getAttribute("path") || "";
-  const statement = [...xml.querySelectorAll("statement")]
+  const statement = selectStatement([...xml.querySelectorAll("statement")]
     .map(node => ({
       path: node.getAttribute("path") || "",
       type: node.getAttribute("type") || "",
       language: node.getAttribute("language") || ""
-    }))
-    .find(item => item.type.includes("html"))
-    || [...xml.querySelectorAll("statement")].map(node => ({ path: node.getAttribute("path") || "" }))[0]
-    || { path: "" };
+    })));
 
   return {
     title,
@@ -113,6 +110,32 @@ function parseProblemXml(xmlText) {
       .map((node, index) => node.getAttribute("sample") === "true" ? index + 1 : null)
       .filter(Boolean)
   };
+}
+
+function selectStatement(statements) {
+  return statements
+    .filter(statement => statement.path)
+    .sort((a, b) => scoreStatementCandidate(a) - scoreStatementCandidate(b))[0]
+    || { path: "" };
+}
+
+function scoreStatementCandidate(statement) {
+  const path = statement.path || "";
+  const lowerPath = path.toLowerCase();
+  const lowerType = (statement.type || "").toLowerCase();
+  const lowerLanguage = (statement.language || "").toLowerCase();
+  let score = lowerPath.length;
+  if (lowerType.includes("html") || isHtmlPath(lowerPath)) score -= 10000;
+  if (isKoreanStatement(lowerLanguage, lowerPath)) score -= 5000;
+  if (basename(lowerPath) === "problem.html" || basename(lowerPath) === "problem.htm") score -= 500;
+  return score;
+}
+
+function isKoreanStatement(language, path) {
+  return language === "korean"
+    || language === "ko"
+    || path.includes("/korean/")
+    || path.includes("\\korean\\");
 }
 
 function solutionCandidates(xml) {
@@ -392,7 +415,8 @@ function assertReadableTestFile(entry, bytes) {
 }
 
 async function buildStatementHtml(zip, problem) {
-  const statementEntry = zip.find(problem.statementPath) || findHtmlStatement(zip.files());
+  const preferredStatementEntry = zip.find(problem.statementPath);
+  const statementEntry = isHtmlEntry(preferredStatementEntry) ? preferredStatementEntry : findHtmlStatement(zip.files());
   if (!statementEntry) return { title: "", html: "" };
   const statementHtml = decodeBestEffort(await zip.read(statementEntry));
   const htmlDoc = new DOMParser().parseFromString(statementHtml, "text/html");
@@ -762,15 +786,25 @@ function exampleBoundary() {
 
 function findHtmlStatement(entries) {
   return entries
-    .filter(entry => entry.name.toLowerCase().endsWith(".html") || entry.name.toLowerCase().endsWith(".htm"))
+    .filter(isHtmlEntry)
     .sort((a, b) => scoreStatement(a.name) - scoreStatement(b.name))[0];
+}
+
+function isHtmlEntry(entry) {
+  return Boolean(entry && isHtmlPath(entry.name));
+}
+
+function isHtmlPath(path) {
+  const lower = String(path || "").toLowerCase();
+  return lower.endsWith(".html") || lower.endsWith(".htm");
 }
 
 function scoreStatement(path) {
   const lower = path.toLowerCase();
   let score = lower.length;
+  if (isKoreanStatement("", lower)) score -= 5000;
+  if (basename(lower) === "problem.html" || basename(lower) === "problem.htm") score -= 500;
   if (lower.includes("statement")) score -= 100;
-  if (lower.includes("korean")) score -= 50;
   return score;
 }
 
