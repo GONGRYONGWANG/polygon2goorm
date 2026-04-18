@@ -43,7 +43,7 @@ The extension:
 4. Select this folder:
 
 ```text
-E:\dinoj\Documents\Polygon2Goorm
+<project-folder>
 ```
 
 ## Development Check
