@@ -443,12 +443,10 @@ function sectionTitle(node) {
   const normalized = rawTitle.toLowerCase();
   if (normalized === "input") return "입력";
   if (normalized === "output") return "출력";
-  if (normalized === "note" || normalized === "notes") return "노트";
   return rawTitle || classTitle(node);
 }
 
 function classTitle(node) {
-  if (node.classList.contains("note") || node.classList.contains("notes")) return "노트";
   return cleanTitle([...node.classList].join(" "));
 }
 
