@@ -1,0 +1,58 @@
+# polygon2goorm Progress Log
+
+## 2026-04-17
+
+- Read `polygon2goorm_codex_instructions.md` as the source of truth.
+- Chose a Java 21 Gradle CLI architecture with separate domain, analysis, parser, writer, zip, and application layers.
+- Documented v1 assumptions:
+  - Only Polygon FULL package ZIP input is targeted.
+  - Only stdin/stdout testcase-based problems are convertible without manual action.
+  - Custom checker and interactive packages are unsupported.
+  - Generator-dependent packages are unsupported in v1.
+  - Validators are reported but do not block conversion when precomputed tests are available.
+  - Sample detection is best-effort; uncertain tests are treated as hidden.
+  - ZIP paths are discovered by filename, extension, path tokens, and pair scoring rather than fixed locations.
+- Implemented v1 project scaffold:
+  - Gradle Java 21 application setup with picocli, Jackson, JUnit 5, and AssertJ.
+  - Domain IR, discovery, report, and compatibility models.
+  - ZIP extraction with zip-slip protection.
+  - Full-tree file discovery and flexible package scanning.
+  - Defensive `problem.xml` parsing from both text nodes and attributes.
+  - Testcase pair matching for common `.in`/`.out`/`.ans` and numeric patterns.
+  - Compatibility analyzer for AUTO_PORTABLE, SEMI_PORTABLE, and UNSUPPORTED.
+  - IR builder, goorm helper manifest builder, output writer, and README writer.
+  - `inspect` and `convert` CLI commands.
+  - Unit tests for matcher, scanner, and analyzer behavior.
+- Updated goorm export format after real upload constraints were provided:
+  - Test files are now named `input.n.txt` and `output.n.txt`.
+  - `goorm-testcases.zip` is generated with testcase files at the ZIP root.
+  - Conversion enforces goorm testcase limits: 60 files maximum, 30MB per testcase file, and 180MB total testcase content before compression.
+- Replaced PDF statement upload plan with goorm editor text export:
+  - `statement.html` is generated from Polygon HTML fallback as an editor-friendly fragment.
+  - Empty paragraphs are normalized toward `<p><br></p>`.
+  - `statement.txt` is generated as a plain-text fallback.
+  - PDF generation/upload is no longer part of the conversion flow.
+- Simplified statement HTML export for goorm editor paste:
+  - Removed Polygon wrapper/classes/scripts/styles from the exported statement.
+  - Rebuilt statement as goorm editor HTML with `문제`, `입력`, `출력` headings and `/texconverter` math images.
+  - Sample input/output blocks are excluded from statement HTML because goorm handles examples through testcase data.
+  - Added best-effort charset selection between UTF-8 and MS949 to avoid Korean mojibake in Polygon HTML packages.
+- Added drag-and-drop desktop GUI:
+  - `gradle runGui` opens a Swing window.
+  - Dropping a Polygon ZIP runs inspect and conversion.
+  - Unsupported packages are not converted and show blocking reasons.
+  - Portable/semi-portable packages generate `statement.html` and `goorm-testcases.zip` in a sibling `<zip-name>-goorm` folder.
+  - `run-gui.vbs` launches the GUI without keeping a terminal window open.
+- Refreshed the GUI presentation:
+  - Replaced the default Swing utility look with a cleaner light layout.
+  - Added a larger drag target, status label, styled action button, and bordered log panel.
+- Tightened checker compatibility:
+  - Only exact-output standard checkers (`std::ncmp.cpp`, `std::lcmp.cpp`, `std::wcmp.cpp`, `std::fcmp.cpp`, `std::yesno.cpp`) are treated as portable.
+  - Non-exact standard checkers such as `std::rcmp6.cpp` are treated as unsupported because goorm v1 output comparison cannot represent tolerance-based judging.
+  - CLI conversion errors now print a concise message instead of a stack trace for expected app-level failures.
+- Added goorm example testcase metadata:
+  - `goorm.json` now includes `input_output_example_set`.
+  - Polygon sample tests are marked as `"true"` so the first sample testcase can be used as the input/output example in goorm.
+- Verification note:
+  - Java 21 and Gradle 9.4.1 are available.
+  - `gradle test` passes.

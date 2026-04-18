@@ -1,0 +1,41 @@
+# Polygon2Goorm Progress Log
+
+## 2026-04-18
+
+- Archived the previous Java/Gradle prototype under `archive/java-prototype`.
+- Started a Chrome extension-only implementation.
+- Added extension UI for selecting Polygon ZIP files and detecting `lectureIndex`.
+- Implemented browser-side ZIP parsing for stored and deflated ZIP entries.
+- Implemented goorm testcase ZIP generation without Java dependencies.
+- Implemented Polygon package scanning, `problem.xml` parsing, testcase pairing, statement conversion, and checker compatibility checks in JavaScript.
+- Implemented goorm API calls from the active goorm page:
+  - `POST /api/quiz/programming/batch/testcase`
+  - `POST /quiz/add`
+- Statement images are embedded as base64 data URLs.
+- Statement math is converted to goorm `/texconverter?eq=...` images.
+- Repaired extension UI text encoding and verified JavaScript syntax with `npm run check`.
+- Updated sample testcase handling to follow Polygon `sample="true"` metadata instead of assuming the first testcase.
+- Tightened checker detection so unknown checker files are treated as unsupported.
+- Added Polygon solution discovery so the accepted/main C++ source is copied into goorm `source` and `answer_code`.
+- Separated goorm starter template code from Polygon solution extraction: `source` and `answer_code` keep default templates, while the Polygon solution is not uploaded to goorm.
+- Corrected goorm code-field mapping: `source` carries the judge answer source, while `answer_code` keeps the language starter templates.
+- Restored passing the extracted Polygon solution into the injected goorm payload so `source` receives the actual answer code.
+- Made solution selection prefer Polygon `solution tag="main"` explicitly and report the selected solution file path in the extension log.
+- Hardened ZIP deflate reading for testcase files and added a guard that fails conversion if a non-empty Polygon test is read as empty.
+- Changed generated goorm testcase ZIP entries from stored mode to deflated mode when the browser supports `CompressionStream`, matching normal ZIP writer behavior more closely.
+- Added extension logging for goorm testcase upload response byte totals to distinguish ZIP generation issues from final save issues.
+- Switched final goorm save to require `/api/quiz/programming/batch` multipart and surface its error response instead of silently falling back to `/quiz/add`.
+- Removed the temporary generated testcase ZIP download button after the automatic batch save flow was verified.
+- Moved multipart response helper functions inside the injected page function so Chrome scripting can access them.
+- Adjusted creation flow for goorm batch saving: create the quiz with `/quiz/add`, extract the generated quiz index, then call `/api/quiz/programming/batch` with that index and the batch ZIP.
+- Fixed testcase ordering by naturally sorting Polygon test entries before assigning goorm `input.n.txt` / `output.n.txt` names.
+- Added an automatic active goorm tab reload shortly after successful problem creation.
+- Prefer the Korean statement title from Polygon HTML over the package short-name when available.
+- Removed the manual Polygon ZIP file input flow from the popup.
+- Added Polygon page integration: the popup now searches the active Polygon tab for a package download link, downloads it, converts it, and sends the result through an open goorm LEVEL tab.
+- Broadened Polygon package link discovery to inspect all frames, relative links, forms, and to report top candidate links when no package link is selected.
+- Fixed Chrome scripting API usage by moving `allFrames` into the `target` object.
+- Expanded Polygon package discovery diagnostics to include buttons, onclick handlers, data attributes, page URL, and non-link package-related controls.
+- Updated Polygon package selection to strongly prefer Windows package links and use page order as the tie-breaker, so the topmost/latest Windows package is selected.
+- Added security hardening: testcase count/size limits, generated ZIP size guard, image MIME/size filtering, Polygon package URL allowlist, lectureIndex format validation, stricter lectureIndex detection page requirements, and isolated-world goorm API injection.
+- Improved statement conversion by dropping empty paragraph breaks, supporting images in nested `div`/`center`/`table` blocks, and resolving more Polygon image path variants.

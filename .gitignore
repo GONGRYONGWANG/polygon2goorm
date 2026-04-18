@@ -1,0 +1,23 @@
+# Generated extension package
+polygon2goorm-extension.zip
+
+# Polygon package samples and downloaded packages
+*$windows.zip
+*.zip
+
+# Java/Gradle prototype outputs
+.gradle/
+build/
+archive/java-prototype/.gradle/
+archive/java-prototype/build/
+archive/java-prototype/out-*/
+
+# Local editor and OS files
+.idea/
+.vscode/
+*.iml
+Thumbs.db
+Desktop.ini
+
+# Node dependencies, if added later
+node_modules/

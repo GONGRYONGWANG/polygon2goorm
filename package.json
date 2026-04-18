@@ -1,0 +1,7 @@
+{
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "node --check popup.js && node --check src/polygon.js && node --check src/zip.js && node --check src/util.js && node --check src/crc32.js"
+  }
+}
