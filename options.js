@@ -29,6 +29,8 @@ const LANGUAGE_LABELS = {
   csharp: "C#"
 };
 
+const REPOSITORY_URL = "https://github.com/GONGRYONGWANG/polygon2goorm";
+
 const DEFAULT_LIMITS = {
   c: boj(),
   "c++": boj(),
@@ -62,6 +64,7 @@ const DEFAULT_LIMITS = {
 
 const rows = document.querySelector("#limitRows");
 const status = document.querySelector("#status");
+const repoLink = document.querySelector("#repoLink");
 const saveButton = document.querySelector("#saveButton");
 const resetButton = document.querySelector("#resetButton");
 
@@ -73,8 +76,13 @@ function boj(timeScale = 1, timeAdd = 0, memoryScale = 1, memoryAdd = 0) {
 
 async function init() {
   render(await loadLimits());
+  repoLink.addEventListener("click", openRepository);
   saveButton.addEventListener("click", save);
   resetButton.addEventListener("click", reset);
+}
+
+async function openRepository() {
+  await chrome.tabs.create({ url: REPOSITORY_URL });
 }
 
 async function loadLimits() {

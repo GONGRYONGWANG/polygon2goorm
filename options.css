@@ -21,11 +21,37 @@ header {
   margin-bottom: 18px;
 }
 
-.eyebrow {
+.brand-link {
   margin: 0 0 6px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: 0;
+  line-height: 1.2;
+  cursor: pointer;
+}
+
+.brand-link:hover {
+  opacity: 0.86;
+}
+
+.brand-link:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 4px;
+}
+
+.brand-polygon {
+  color: #008fc8;
+}
+
+.brand-separator {
+  color: #111;
+}
+
+.brand-goorm {
   color: #2563eb;
-  font-size: 12px;
-  font-weight: 700;
 }
 
 h1 {
