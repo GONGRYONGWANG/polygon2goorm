@@ -20,12 +20,25 @@ main {
   text-align: center;
 }
 
-.eyebrow {
+.brand-link {
   margin: 2px 0 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
   font-size: 28px;
   font-weight: 800;
   letter-spacing: 0;
   line-height: 1.2;
+  cursor: pointer;
+}
+
+.brand-link:hover {
+  opacity: 0.86;
+}
+
+.brand-link:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 4px;
 }
 
 .brand-polygon {

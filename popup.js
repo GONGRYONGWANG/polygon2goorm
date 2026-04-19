@@ -1,13 +1,21 @@
 ﻿import { convertPolygonPackage } from "./src/polygon.js";
 import { bytesToBase64 } from "./src/util.js";
 
+const REPOSITORY_URL = "https://github.com/GONGRYONGWANG/polygon2goorm";
+
+const repoLink = document.querySelector("#repoLink");
 const portButton = document.querySelector("#portButton");
 const log = document.querySelector("#log");
 
 init();
 
 async function init() {
+  repoLink.addEventListener("click", openRepository);
   portButton.addEventListener("click", portCurrentPolygonProblem);
+}
+
+async function openRepository() {
+  await chrome.tabs.create({ url: REPOSITORY_URL });
 }
 
 async function portCurrentPolygonProblem() {
