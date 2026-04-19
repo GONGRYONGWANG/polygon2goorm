@@ -2,7 +2,7 @@
 
 ## 2026-04-17
 
-- Read `polygon2goorm_codex_instructions.md` as the source of truth.
+- Read the initial project spec as the source of truth.
 - Chose a Java 21 Gradle CLI architecture with separate domain, analysis, parser, writer, zip, and application layers.
 - Documented v1 assumptions:
   - Only Polygon FULL package ZIP input is targeted.

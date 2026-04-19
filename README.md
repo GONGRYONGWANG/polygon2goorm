@@ -28,7 +28,7 @@ Polygon2Goorm은 현재 열려 있는 Polygon `Packages` 페이지에서 최신 
 
 Chrome 웹 스토어에 등록된 버전을 설치하면 됩니다.
 
-#### 개발자 모드로 직접 설치
+#### 직접 설치
 
 1. 이 저장소를 내려받거나 압축 해제합니다.
 2. Chrome에서 `chrome://extensions`를 엽니다.
@@ -105,54 +105,6 @@ Chrome 웹 스토어에 등록된 버전을 설치하면 됩니다.
 
 기본값은 가능한 경우 BOJ의 언어별 보정 규칙을 따릅니다. 옵션 페이지의 `BOJ 기본값으로 초기화` 버튼으로 초기화할 수 있습니다.
 
-### 개발
-
-문법 검사를 실행합니다.
-
-```powershell
-npm run check
-```
-
-테스트를 실행합니다.
-
-```powershell
-npm test
-```
-
-배포용 ZIP을 생성합니다.
-
-```powershell
-npm run package
-```
-
-확장 버전을 올립니다.
-
-```powershell
-npm run version:patch
-npm run version:minor
-npm run version:major
-```
-
-### 저장소 구조
-
-```text
-.
-├── manifest.json
-├── popup.html / popup.js / styles.css
-├── options.html / options.js / options.css
-├── src/
-│   ├── polygon.js
-│   ├── zip.js
-│   ├── crc32.js
-│   └── util.js
-├── tests/
-├── scripts/
-├── icons/
-└── archive/java-prototype/
-```
-
-`archive/java-prototype`에는 이전 Java/Gradle 프로토타입이 보관되어 있습니다. 현재 확장은 Java 없이 브라우저 안에서 동작합니다.
-
 ### 개인정보와 권한
 
 이 확장은 별도 서버를 운영하지 않으며 사용자 데이터를 수집하지 않습니다.
@@ -164,22 +116,6 @@ npm run version:major
 - `tabs`: 열린 goorm LEVEL 탭을 찾고 생성 후 이동시키기 위해 사용
 - `storage`: 사용자가 설정한 시간/메모리 보정 옵션 저장
 - 호스트 권한: Polygon package 다운로드와 goorm 문제 생성 요청에 사용
-
-### 배포 전 확인
-
-공개 배포 전에 다음을 확인하세요.
-
-```powershell
-npm run package
-```
-
-그리고 다음 항목이 저장소에 포함되지 않았는지 확인하세요.
-
-- 개인 로컬 경로
-- GitHub token 또는 API token
-- 구름/Polygon 세션 쿠키
-- 다운로드한 Polygon package ZIP
-- 생성된 `polygon2goorm-extension.zip`
 
 ---
 
@@ -207,7 +143,7 @@ All conversion work runs in the user's browser. The extension does not send Poly
 
 Install the published Chrome Web Store version when available.
 
-#### Local Developer Install
+#### Manual Install
 
 1. Download or clone this repository.
 2. Open `chrome://extensions` in Chrome.
@@ -284,54 +220,6 @@ Each language has:
 
 Defaults follow BOJ-style language adjustments where applicable. Use `BOJ 기본값으로 초기화` to restore the defaults.
 
-### Development
-
-Run syntax checks:
-
-```powershell
-npm run check
-```
-
-Run tests:
-
-```powershell
-npm test
-```
-
-Create a distributable ZIP:
-
-```powershell
-npm run package
-```
-
-Bump the extension version:
-
-```powershell
-npm run version:patch
-npm run version:minor
-npm run version:major
-```
-
-### Repository Layout
-
-```text
-.
-├── manifest.json
-├── popup.html / popup.js / styles.css
-├── options.html / options.js / options.css
-├── src/
-│   ├── polygon.js
-│   ├── zip.js
-│   ├── crc32.js
-│   └── util.js
-├── tests/
-├── scripts/
-├── icons/
-└── archive/java-prototype/
-```
-
-`archive/java-prototype` contains the archived Java/Gradle prototype. The current extension runs in the browser without Java.
-
 ### Privacy and Permissions
 
 This extension does not operate a separate server and does not collect user data.
@@ -343,19 +231,3 @@ Permissions are used for:
 - `tabs`: finding an open goorm LEVEL tab and navigating it after creation
 - `storage`: saving time/memory conversion options
 - host permissions: downloading Polygon packages and sending goorm problem creation requests
-
-### Public Release Checklist
-
-Before publishing, run:
-
-```powershell
-npm run package
-```
-
-Also make sure the repository does not include:
-
-- personal local paths
-- GitHub tokens or API tokens
-- goorm/Polygon session cookies
-- downloaded Polygon package ZIP files
-- the generated `polygon2goorm-extension.zip`
