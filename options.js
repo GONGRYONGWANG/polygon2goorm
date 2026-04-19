@@ -64,6 +64,8 @@ const rows = document.querySelector("#limitRows");
 const status = document.querySelector("#status");
 const saveButton = document.querySelector("#saveButton");
 const resetButton = document.querySelector("#resetButton");
+const addOneSecondButton = document.querySelector("#addOneSecondButton");
+const clearAdditionsButton = document.querySelector("#clearAdditionsButton");
 
 init();
 
@@ -75,6 +77,8 @@ async function init() {
   render(await loadLimits());
   saveButton.addEventListener("click", save);
   resetButton.addEventListener("click", reset);
+  addOneSecondButton.addEventListener("click", addOneSecondToAllLanguages);
+  clearAdditionsButton.addEventListener("click", clearAdditions);
 }
 
 async function loadLimits() {
@@ -135,7 +139,7 @@ async function save() {
   for (const input of rows.querySelectorAll("input")) {
     const value = Number(input.value);
     if (!Number.isFinite(value) || value < 0 || (input.dataset.field.endsWith("Scale") && value <= 0)) {
-      showStatus(`${LANGUAGE_LABELS[input.dataset.language]} 값을 확인하세요.`);
+      showStatus(`${LANGUAGE_LABELS[input.dataset.language]} 값을 확인하세요`);
       input.focus();
       return;
     }
@@ -151,6 +155,20 @@ async function reset() {
   await chrome.storage.local.remove(["timeScales"]);
   render(DEFAULT_LIMITS);
   showStatus("BOJ 기본값으로 초기화됨");
+}
+
+function addOneSecondToAllLanguages() {
+  for (const input of rows.querySelectorAll('input[data-field="timeAdd"]')) {
+    input.value = String(Number(input.value || 0) + 1);
+  }
+  showStatus("모든 언어 시간 추가값을 1초 올림");
+}
+
+function clearAdditions() {
+  for (const input of rows.querySelectorAll('input[data-field$="Add"]')) {
+    input.value = "0";
+  }
+  showStatus("모든 추가값을 0으로 설정");
 }
 
 function showStatus(message) {

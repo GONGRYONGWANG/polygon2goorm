@@ -54,10 +54,14 @@ async function portCurrentPolygonProblem() {
       "문제 생성 완료.",
       "",
       `제목: ${conversion.title}`,
+      `Statement: ${conversion.statementPath || "unknown"}`,
       `테스트케이스: ${conversion.testCount}개`,
+      `발견된 테스트 파일: input ${conversion.discoveredInputCount ?? "?"}개 / output ${conversion.discoveredOutputCount ?? "?"}개`,
+      `본문 이미지: ${conversion.embeddedImageCount ?? 0}개 embedded`,
       `업로드 크기: input ${uploadResult.inputBytes ?? "?"} bytes / output ${uploadResult.outputBytes ?? "?"} bytes`,
       `저장 방식: ${uploadResult.finalMethod || "?"}`,
-      `정답 코드: ${conversion.answerSource ? `추출됨 (${conversion.answerSourcePath || "경로 미상"})` : "찾지 못함"}`,
+      `정답 코드: ${conversion.answerSource ? `추출됨 (${conversion.answerLanguage || "unknown"}, ${conversion.answerSourcePath || "경로 미상"})` : "찾지 못함"}`,
+      `제한: ${Math.max(1, Math.ceil(conversion.timeLimitMs / 1000))}s / ${conversion.memoryLimitMb || 512}MB`,
       `판정: ${conversion.report.result}`,
       "",
       "구름 내 문제 목록으로 이동합니다.",
@@ -330,7 +334,8 @@ function packageFilename(response, url) {
   if (utf8) return decodeURIComponent(utf8[1]);
   const plain = disposition.match(/filename="?([^";]+)"?/i);
   if (plain) return plain[1];
-  const fromUrl = new URL(url).pathname.split("/").filter(Boolean).at(-1);
+  const parts = new URL(url).pathname.split("/").filter(Boolean);
+  const fromUrl = parts[parts.length - 1];
   return fromUrl?.endsWith(".zip") ? fromUrl : "polygon-package.zip";
 }
 

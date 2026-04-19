@@ -24,8 +24,9 @@ export async function convertPolygonPackage(file) {
   problem.hasAnswerSource = Boolean(answer.source);
   problem.answerUnsupported = answer.unsupported || null;
 
-  const tests = findTests(zip.files(), problem.sampleIndexes);
-  const report = analyze(problem, tests);
+  const testDiscovery = findTests(zip.files(), problem.sampleIndexes);
+  const tests = testDiscovery.pairs;
+  const report = analyze(problem, testDiscovery);
   if (report.result === "UNSUPPORTED") {
     return {
       title: problem.title,
@@ -38,6 +39,8 @@ export async function convertPolygonPackage(file) {
       testcaseZipBytes: new Uint8Array(),
       inputOutputExampleSet: [],
       testCount: tests.length,
+      discoveredInputCount: testDiscovery.inputCount,
+      discoveredOutputCount: testDiscovery.outputCount,
       report
     };
   }
@@ -56,6 +59,10 @@ export async function convertPolygonPackage(file) {
     testcaseZipBytes,
     inputOutputExampleSet: tests.map(test => test.sample ? "true" : "false"),
     testCount: tests.length,
+    discoveredInputCount: testDiscovery.inputCount,
+    discoveredOutputCount: testDiscovery.outputCount,
+    statementPath: statement.path,
+    embeddedImageCount: statement.embeddedImageCount,
     report
   };
 }
@@ -278,10 +285,25 @@ function fallbackSolutionScore(path) {
   return score;
 }
 
-function analyze(problem, tests) {
+function analyze(problem, testDiscovery) {
   const issues = [];
+  const tests = Array.isArray(testDiscovery) ? testDiscovery : testDiscovery.pairs;
+  const inputCount = Array.isArray(testDiscovery) ? tests.length : testDiscovery.inputCount;
+  const outputCount = Array.isArray(testDiscovery) ? tests.length : testDiscovery.outputCount;
   if (tests.length === 0) {
-    issues.push({ type: "TESTS_MISSING", severity: "HIGH", message: "No precomputed input/output test pairs were found." });
+    if (inputCount > 0 && outputCount === 0) {
+      issues.push({
+        type: "TEST_OUTPUTS_MISSING",
+        severity: "HIGH",
+        message: `No precomputed output files were found. Found ${inputCount} input file(s) but 0 output file(s). This looks like a standard/source package; use a Windows/FULL package with tests/*.a outputs.`
+      });
+    } else {
+      issues.push({
+        type: "TESTS_MISSING",
+        severity: "HIGH",
+        message: `No precomputed input/output test pairs were found. Found ${inputCount} input file(s) and ${outputCount} output file(s).`
+      });
+    }
   }
   if (tests.length > MAX_TEST_COUNT) {
     issues.push({ type: "TOO_MANY_TESTS", severity: "HIGH", message: `goorm supports at most ${MAX_TEST_COUNT} testcase pairs, found ${tests.length}.` });
@@ -348,7 +370,13 @@ function findTests(entries, sampleIndexes) {
       });
     }
   }
-  return pairs;
+  return {
+    pairs,
+    inputCount: inputs.length,
+    outputCount: outputs.length,
+    unmatchedInputCount: inputs.length - pairs.length,
+    unmatchedOutputCount: outputs.length - used.size
+  };
 }
 
 function compareTestEntries(a, b) {
@@ -360,7 +388,7 @@ function compareTestEntries(a, b) {
 }
 
 function testSortKey(path) {
-  const normalized = path.replaceAll("\\", "/");
+  const normalized = normalizeSlashes(path);
   const name = basename(normalized).toLowerCase();
   const group = dirname(normalized).toLowerCase();
   const number = Number(name.match(/\d+/)?.[0] || Number.MAX_SAFE_INTEGER);
@@ -417,7 +445,7 @@ function assertReadableTestFile(entry, bytes) {
 async function buildStatementHtml(zip, problem) {
   const preferredStatementEntry = zip.find(problem.statementPath);
   const statementEntry = isHtmlEntry(preferredStatementEntry) ? preferredStatementEntry : findHtmlStatement(zip.files());
-  if (!statementEntry) return { title: "", html: "" };
+  if (!statementEntry) return { title: "", html: "", path: "", embeddedImageCount: 0 };
   const statementHtml = decodeBestEffort(await zip.read(statementEntry));
   const htmlDoc = new DOMParser().parseFromString(statementHtml, "text/html");
   const statementRoot = htmlDoc.querySelector(".problem-statement") || htmlDoc.body;
@@ -432,7 +460,13 @@ async function buildStatementHtml(zip, problem) {
     blocks.push(...await contentBlocks(zip, htmlDir, section.node, section.skipLeadingBlank));
   }
   blocks.push(exampleBoundary());
-  return { title, html: compactBlocks(blocks).join("") };
+  const html = compactBlocks(blocks).join("");
+  return {
+    title,
+    html,
+    path: statementEntry.name,
+    embeddedImageCount: (html.match(/<img\b/gi) || []).filter(match => match).length
+  };
 }
 
 function statementSections(statementRoot) {
@@ -567,7 +601,7 @@ function compactBlocks(blocks) {
   const compacted = [];
   for (const block of blocks) {
     if (!block) continue;
-    if (block === sectionSpacer() && compacted.at(-1) === sectionSpacer()) continue;
+    if (block === sectionSpacer() && compacted[compacted.length - 1] === sectionSpacer()) continue;
     compacted.push(block);
   }
   return compacted;
@@ -752,7 +786,7 @@ function ascii(bytes, start, end) {
 
 function normalizeRelativePath(path) {
   const parts = [];
-  for (const part of path.replaceAll("\\", "/").split("/")) {
+  for (const part of normalizeSlashes(path).split("/")) {
     if (!part || part === ".") continue;
     if (part === "..") parts.pop();
     else parts.push(part);
@@ -827,17 +861,30 @@ function mimeType(path) {
   return "";
 }
 
+export const __test__ = {
+  analyze,
+  findTests,
+  selectStatement,
+  scoreStatement,
+  scoreStatementCandidate
+};
+
 function stem(path) {
   return basename(path).toLowerCase().replace(/\.(in|out|ans|a|input|answer)$/, "");
 }
 
 function basename(path) {
-  return path.replaceAll("\\", "/").split("/").at(-1);
+  const parts = normalizeSlashes(path).split("/");
+  return parts[parts.length - 1];
 }
 
 function dirname(path) {
-  const parts = path.replaceAll("\\", "/").split("/");
+  const parts = normalizeSlashes(path).split("/");
   parts.pop();
   return parts.join("/");
+}
+
+function normalizeSlashes(path) {
+  return String(path || "").split("\\").join("/");
 }
 
