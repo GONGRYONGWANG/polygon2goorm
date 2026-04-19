@@ -22,6 +22,7 @@ async function portCurrentPolygonProblem() {
   setBusy(true);
   try {
     const goormTab = await findGoormTab();
+    await ensureGoormLoggedIn(goormTab.id);
     const lectureIndex = await detectSingleLectureIndex(goormTab.id);
 
     writeLog("Polygon 패키지 다운로드 링크 찾는 중...");
@@ -382,6 +383,48 @@ async function detectSingleLectureIndex(tabId) {
   return lectureIndex;
 }
 
+async function ensureGoormLoggedIn(tabId) {
+  const [{ result }] = await chrome.scripting.executeScript({
+    target: { tabId },
+    func: async () => {
+      try {
+        const response = await fetch("/api/notification-level/new", {
+          credentials: "include",
+          cache: "no-cache"
+        });
+        const text = await response.text();
+        const contentType = response.headers.get("content-type") || "";
+        const looksJson = contentType.includes("application/json")
+          || text.trim() === "true"
+          || text.trim() === "false"
+          || text.trim() === "null"
+          || text.trim().startsWith("{")
+          || text.trim().startsWith("[");
+
+        return {
+          ok: response.ok && !response.redirected && looksJson,
+          status: response.status,
+          redirected: response.redirected,
+          url: response.url,
+          contentType,
+          sample: text.slice(0, 120)
+        };
+      } catch (error) {
+        return { ok: false, networkError: error.message };
+      }
+    }
+  });
+
+  if (result?.ok) return;
+
+  const detail = result?.networkError
+    ? ` (${result.networkError})`
+    : result?.status
+      ? ` (HTTP ${result.status})`
+      : "";
+  throw new Error(`구름 LEVEL 로그인 상태를 확인하지 못했습니다${detail}. 구름 LEVEL 탭에서 로그인한 뒤 새로고침하고 다시 실행하세요.`);
+}
+
 function isValidLectureIndex(value) {
   return /^lec_[A-Za-z0-9_]+$/.test(value);
 }
@@ -452,6 +495,14 @@ function uploadAndCreateProblem(payload) {
 
     const match = String(text || "").match(/q_[A-Za-z0-9]+_\d+/);
     return match ? match[0] : "";
+  }
+
+  async function fetchGoorm(stage, url, options) {
+    try {
+      return await fetch(url, options);
+    } catch (error) {
+      throw new Error(`${stage} 요청 실패: ${error.message}. 구름 LEVEL 탭이 로그인 상태인지 확인하고 새로고침한 뒤 다시 실행하세요.`);
+    }
   }
 
   function distributeScores(count) {
@@ -698,7 +749,7 @@ function uploadAndCreateProblem(payload) {
   const batchForm = new FormData();
   batchForm.append("batchFile", batchFile);
 
-  return fetch("/api/quiz/programming/batch/testcase", {
+  return fetchGoorm("테스트케이스 업로드", "/api/quiz/programming/batch/testcase", {
     method: "POST",
     credentials: "include",
     body: batchForm
@@ -716,7 +767,7 @@ function uploadAndCreateProblem(payload) {
       const outputset = testcases.map(testcase => testcase.output.path);
       const quizInfo = buildQuizAddPayload(inputset, outputset, testcases.length);
 
-      return fetch("/quiz/add", {
+      return fetchGoorm("빈 문제 생성", "/quiz/add", {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -742,7 +793,7 @@ function uploadAndCreateProblem(payload) {
       finalForm.append("quizInfo", JSON.stringify(quizInfo));
       finalForm.append("batchFile", batchFile);
 
-      return fetch("/api/quiz/programming/batch", {
+      return fetchGoorm("최종 batch 저장", "/api/quiz/programming/batch", {
         method: "POST",
         credentials: "include",
         body: finalForm
