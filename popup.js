@@ -2,6 +2,7 @@
 import { bytesToBase64 } from "./src/util.js";
 
 const REPOSITORY_URL = "https://github.com/GONGRYONGWANG/polygon2goorm";
+const POPUP_LOG_KEY = "popupLog";
 
 const repoLink = document.querySelector("#repoLink");
 const portButton = document.querySelector("#portButton");
@@ -10,6 +11,7 @@ const log = document.querySelector("#log");
 init();
 
 async function init() {
+  await restoreLastLog();
   repoLink.addEventListener("click", openRepository);
   portButton.addEventListener("click", portCurrentPolygonProblem);
 }
@@ -458,6 +460,13 @@ async function openMyGoormProblemsAfterDelay(tabId, windowId) {
   }
 }
 
+async function restoreLastLog() {
+  const stored = await chrome.storage.local.get([POPUP_LOG_KEY]);
+  if (typeof stored[POPUP_LOG_KEY] === "string" && stored[POPUP_LOG_KEY]) {
+    log.textContent = stored[POPUP_LOG_KEY];
+  }
+}
+
 async function readResourceLimitOverrides() {
   const stored = await chrome.storage.local.get(["resourceLimits", "timeScales"]);
   if (stored.resourceLimits && typeof stored.resourceLimits === "object") return stored.resourceLimits;
@@ -822,5 +831,6 @@ function setBusy(busy) {
 
 function writeLog(message) {
   log.textContent = message;
+  void chrome.storage.local.set({ [POPUP_LOG_KEY]: message });
 }
 
