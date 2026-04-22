@@ -47,6 +47,7 @@ async function portCurrentPolygonProblem() {
       lectureIndex,
       title: conversion.title,
       contents: conversion.statementHtml,
+      tutorialHtml: conversion.tutorialHtml,
       answerSource: conversion.answerSource,
       answerSourcePath: conversion.answerSourcePath,
       answerLanguage: conversion.answerLanguage,
@@ -624,7 +625,7 @@ function uploadAndCreateProblem(payload) {
       validate_memory_limit: JSON.stringify(limits.memory),
       validate_run_option: JSON.stringify(emptyLanguageMap(languageKeys)),
       validate_time_limit: JSON.stringify(limits.time),
-      quizExplanation: { type: "html", index: "", text: "" },
+      quizExplanation: { isUse: Boolean(payload.tutorialHtml), type: "html", index: "", text: payload.tutorialHtml || "" },
       authorship: [{ order: 1, name: "", url: "" }, { order: 2, name: "", url: "" }],
       classification: JSON.stringify([
         { value: "tag_private", text: "비공개", from: "offer" },

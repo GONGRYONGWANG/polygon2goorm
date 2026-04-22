@@ -9,6 +9,7 @@ const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const DEFAULT_IMAGE_MAX_WIDTH = 640;
 const ALLOWED_IMAGE_MIMES = new Set(["image/png", "image/jpeg", "image/gif", "image/webp"]);
 const JUDGE_SOURCE_LANGUAGES = new Set(["c++", "python3"]);
+const ELEMENT_NODE = 1;
 
 export async function convertPolygonPackage(file) {
   const zip = await ZipArchive.fromFile(file);
@@ -33,6 +34,7 @@ export async function convertPolygonPackage(file) {
       timeLimitMs: problem.timeLimitMs,
       memoryLimitMb: problem.memoryLimitMb,
       statementHtml: "",
+      tutorialHtml: "",
       answerSource: answer.source,
       answerSourcePath: answer.path,
       answerLanguage: answer.language || "c++",
@@ -53,6 +55,7 @@ export async function convertPolygonPackage(file) {
     timeLimitMs: problem.timeLimitMs,
     memoryLimitMb: problem.memoryLimitMb,
     statementHtml: statement.html,
+    tutorialHtml: statement.tutorialHtml,
     answerSource: answer.source,
     answerSourcePath: answer.path,
     answerLanguage: answer.language || "c++",
@@ -73,6 +76,7 @@ function unsupported(message) {
     timeLimitMs: 0,
     memoryLimitMb: 0,
     statementHtml: "",
+    tutorialHtml: "",
     answerSource: "",
     answerSourcePath: "",
     testcaseZipBytes: new Uint8Array(),
@@ -102,6 +106,12 @@ function parseProblemXml(xmlText) {
       type: node.getAttribute("type") || "",
       language: node.getAttribute("language") || ""
     })));
+  const tutorial = selectStatement([...xml.querySelectorAll("tutorial")]
+    .map(node => ({
+      path: node.getAttribute("path") || "",
+      type: node.getAttribute("type") || "",
+      language: node.getAttribute("language") || ""
+    })));
 
   return {
     title,
@@ -112,6 +122,7 @@ function parseProblemXml(xmlText) {
     checkerName,
     checkerSourcePath,
     statementPath: statement.path,
+    tutorialPath: tutorial.path,
     solutionCandidates: solutionCandidates(xml),
     sampleIndexes: mainTests(xml)
       .map((node, index) => node.getAttribute("sample") === "true" ? index + 1 : null)
@@ -445,7 +456,7 @@ function assertReadableTestFile(entry, bytes) {
 async function buildStatementHtml(zip, problem) {
   const preferredStatementEntry = zip.find(problem.statementPath);
   const statementEntry = isHtmlEntry(preferredStatementEntry) ? preferredStatementEntry : findHtmlStatement(zip.files());
-  if (!statementEntry) return { title: "", html: "", path: "", embeddedImageCount: 0 };
+  if (!statementEntry) return { title: "", html: "", tutorialHtml: "", path: "", embeddedImageCount: 0 };
   const statementHtml = decodeBestEffort(await zip.read(statementEntry));
   const htmlDoc = new DOMParser().parseFromString(statementHtml, "text/html");
   const statementRoot = htmlDoc.querySelector(".problem-statement") || htmlDoc.body;
@@ -454,19 +465,60 @@ async function buildStatementHtml(zip, problem) {
     || "");
   const htmlDir = dirname(statementEntry.name);
   const blocks = [];
+  const tutorialBlocks = [];
   for (const section of statementSections(statementRoot)) {
+    if (isTutorialSection(section.node)) {
+      tutorialBlocks.push(...await contentBlocks(zip, htmlDir, section.node, section.skipLeadingBlank));
+      continue;
+    }
     if (blocks.length) blocks.push(sectionSpacer());
     blocks.push(sectionHeading(section.title));
     blocks.push(...await contentBlocks(zip, htmlDir, section.node, section.skipLeadingBlank));
   }
   blocks.push(exampleBoundary());
   const html = compactBlocks(blocks).join("");
+  const tutorialHtml = compactBlocks(tutorialBlocks).join("") || await buildTutorialHtml(zip, problem, statementEntry.name);
   return {
     title,
     html,
+    tutorialHtml,
     path: statementEntry.name,
     embeddedImageCount: (html.match(/<img\b/gi) || []).filter(match => match).length
   };
+}
+
+async function buildTutorialHtml(zip, problem, statementPath) {
+  const tutorialEntry = findTutorialEntry(zip, problem, statementPath);
+  if (!tutorialEntry) return "";
+
+  const tutorialSource = decodeBestEffort(await zip.read(tutorialEntry));
+  const tutorialDoc = new DOMParser().parseFromString(tutorialSource, "text/html");
+  const tutorialRoot = tutorialDoc.querySelector(".problem-statement .tutorial")
+    || tutorialDoc.querySelector(".tutorial")
+    || tutorialDoc.querySelector(".problem-statement")
+    || tutorialDoc.body;
+
+  return compactBlocks(await contentBlocks(zip, dirname(tutorialEntry.name), tutorialRoot, true)).join("");
+}
+
+function findTutorialEntry(zip, problem, statementPath) {
+  const preferred = zip.find(problem.tutorialPath);
+  if (isHtmlEntry(preferred)) return preferred;
+
+  const sibling = zip.find(dirname(statementPath) + "/tutorial.html");
+  if (isHtmlEntry(sibling)) return sibling;
+
+  return zip.files()
+    .filter(entry => isHtmlEntry(entry) && basename(entry.name).toLowerCase() === "tutorial.html")
+    .sort((a, b) => scoreStatementCandidate({
+      path: a.name,
+      type: "text/html",
+      language: basename(dirname(a.name))
+    }) - scoreStatementCandidate({
+      path: b.name,
+      type: "text/html",
+      language: basename(dirname(b.name))
+    }))[0] || null;
 }
 
 function statementSections(statementRoot) {
@@ -491,9 +543,17 @@ function statementSections(statementRoot) {
 }
 
 function isStatementSection(node) {
-  if (!node || node.nodeType !== Node.ELEMENT_NODE) return false;
+  if (!node || node.nodeType !== ELEMENT_NODE) return false;
   if (node.querySelector(":scope > .section-title")) return true;
-  return node.classList.contains("note") || node.classList.contains("notes");
+  return node.classList.contains("note")
+    || node.classList.contains("notes")
+    || node.classList.contains("tutorial");
+}
+
+function isTutorialSection(node) {
+  if (!node || node.nodeType !== ELEMENT_NODE) return false;
+  const rawTitle = cleanTitle(node.querySelector(":scope > .section-title")?.textContent || "").toLowerCase();
+  return rawTitle === "tutorial" || node.classList.contains("tutorial");
 }
 
 function sectionTitle(node) {
@@ -505,7 +565,6 @@ function sectionTitle(node) {
   if (normalized === "output format") return "출력";
   if (normalized === "scoring") return "배점";
   if (normalized === "notes" || normalized === "note") return "노트";
-  if (normalized === "tutorial") return "노트2";
   return rawTitle || classTitle(node);
 }
 
@@ -869,6 +928,7 @@ function mimeType(path) {
 export const __test__ = {
   analyze,
   findTests,
+  isTutorialSection,
   selectStatement,
   sectionTitle,
   scoreStatement,

@@ -51,12 +51,16 @@ test("maps polygon section titles to goorm-friendly Korean labels", () => {
   const sections = [
     nodeWithTitle("Scoring"),
     nodeWithTitle("Notes"),
-    nodeWithTitle("Tutorial"),
     nodeWithTitle("Input format"),
     nodeWithTitle("Output format")
   ].map(node => __test__.sectionTitle(node));
 
-  assert.deepStrictEqual(sections, ["배점", "노트", "노트2", "입력", "출력"]);
+  assert.deepStrictEqual(sections, ["\uBC30\uC810", "\uB178\uD2B8", "\uC785\uB825", "\uCD9C\uB825"]);
+});
+
+test("treats tutorial sections as explanation content", () => {
+  assert.strictEqual(__test__.isTutorialSection(nodeWithTitle("Tutorial")), true);
+  assert.strictEqual(__test__.isTutorialSection(nodeWithClass("tutorial")), true);
 });
 
 function entry(name, size = 10) {
@@ -77,13 +81,32 @@ function baseProblem() {
 
 function nodeWithTitle(title) {
   return {
+    nodeType: 1,
     querySelector(selector) {
       if (selector === ":scope > .section-title") {
         return { textContent: title };
       }
       return null;
     },
-    classList: []
+    classList: {
+      contains() {
+        return false;
+      }
+    }
+  };
+}
+
+function nodeWithClass(className) {
+  return {
+    nodeType: 1,
+    querySelector() {
+      return null;
+    },
+    classList: {
+      contains(value) {
+        return value === className;
+      }
+    }
   };
 }
 
