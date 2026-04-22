@@ -47,6 +47,18 @@ test("reports standard/source packages with missing output files clearly", () =>
   assert.match(report.issues[0].message, /standard\/source package/i);
 });
 
+test("maps polygon section titles to goorm-friendly Korean labels", () => {
+  const sections = [
+    nodeWithTitle("Scoring"),
+    nodeWithTitle("Notes"),
+    nodeWithTitle("Tutorial"),
+    nodeWithTitle("Input format"),
+    nodeWithTitle("Output format")
+  ].map(node => __test__.sectionTitle(node));
+
+  assert.deepStrictEqual(sections, ["배점", "노트", "노트2", "입력", "출력"]);
+});
+
 function entry(name, size = 10) {
   return { name, uncompressedSize: size };
 }
@@ -60,6 +72,18 @@ function baseProblem() {
     hasCheckerFile: false,
     answerUnsupported: null,
     hasAnswerSource: true
+  };
+}
+
+function nodeWithTitle(title) {
+  return {
+    querySelector(selector) {
+      if (selector === ":scope > .section-title") {
+        return { textContent: title };
+      }
+      return null;
+    },
+    classList: []
   };
 }
 

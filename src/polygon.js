@@ -500,7 +500,12 @@ function sectionTitle(node) {
   const rawTitle = cleanTitle(node.querySelector(":scope > .section-title")?.textContent || "");
   const normalized = rawTitle.toLowerCase();
   if (normalized === "input") return "입력";
+  if (normalized === "input format") return "입력";
   if (normalized === "output") return "출력";
+  if (normalized === "output format") return "출력";
+  if (normalized === "scoring") return "배점";
+  if (normalized === "notes" || normalized === "note") return "노트";
+  if (normalized === "tutorial") return "노트2";
   return rawTitle || classTitle(node);
 }
 
@@ -865,6 +870,7 @@ export const __test__ = {
   analyze,
   findTests,
   selectStatement,
+  sectionTitle,
   scoreStatement,
   scoreStatementCandidate
 };
