@@ -5,6 +5,7 @@ const REPOSITORY_URL = "https://github.com/GONGRYONGWANG/polygon2goorm";
 const POPUP_LOG_KEY = "popupLog";
 
 const repoLink = document.querySelector("#repoLink");
+const optionsButton = document.querySelector("#optionsButton");
 const portButton = document.querySelector("#portButton");
 const log = document.querySelector("#log");
 
@@ -13,11 +14,16 @@ init();
 async function init() {
   await restoreLastLog();
   repoLink.addEventListener("click", openRepository);
+  optionsButton.addEventListener("click", openOptionsPage);
   portButton.addEventListener("click", portCurrentPolygonProblem);
 }
 
 async function openRepository() {
   await chrome.tabs.create({ url: REPOSITORY_URL });
+}
+
+async function openOptionsPage() {
+  await chrome.runtime.openOptionsPage();
 }
 
 async function portCurrentPolygonProblem() {
