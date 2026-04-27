@@ -67,6 +67,7 @@ const status = document.querySelector("#status");
 const repoLink = document.querySelector("#repoLink");
 const saveButton = document.querySelector("#saveButton");
 const resetButton = document.querySelector("#resetButton");
+const neutralButton = document.querySelector("#neutralButton");
 
 init();
 
@@ -78,7 +79,8 @@ async function init() {
   render(await loadLimits());
   repoLink.addEventListener("click", openRepository);
   saveButton.addEventListener("click", save);
-  resetButton.addEventListener("click", reset);
+  resetButton.addEventListener("click", resetToBoj);
+  neutralButton.addEventListener("click", resetToNeutral);
 }
 
 async function openRepository() {
@@ -154,11 +156,23 @@ async function save() {
   showStatus("저장됨");
 }
 
-async function reset() {
+async function resetToBoj() {
   await chrome.storage.local.set({ resourceLimits: DEFAULT_LIMITS });
   await chrome.storage.local.remove(["timeScales"]);
   render(DEFAULT_LIMITS);
-  showStatus("BOJ 기본값으로 초기화됨");
+  showStatus("BOJ 기본값 적용됨");
+}
+
+async function resetToNeutral() {
+  const limits = neutralLimits();
+  await chrome.storage.local.set({ resourceLimits: limits });
+  await chrome.storage.local.remove(["timeScales"]);
+  render(limits);
+  showStatus("초기화됨");
+}
+
+function neutralLimits() {
+  return Object.fromEntries(Object.keys(LANGUAGE_LABELS).map(language => [language, boj()]));
 }
 
 function showStatus(message) {
