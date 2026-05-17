@@ -652,6 +652,48 @@ function uploadAndCreateProblem(payload) {
     };
   }
 
+  function compactQuizInfoForBatch(quizInfo) {
+    return {
+      ...quizInfo,
+      contents: "",
+      quizExplanation: { ...quizInfo.quizExplanation, text: "" }
+    };
+  }
+
+  function saveBatchProblem(quizInfo, batchFile) {
+    const finalForm = new FormData();
+    finalForm.append("quizInfo", JSON.stringify(quizInfo));
+    finalForm.append("batchFile", batchFile);
+
+    return fetchGoorm("최종 batch 저장", "/api/quiz/programming/batch", {
+      method: "POST",
+      credentials: "include",
+      body: finalForm
+    }).then(async response => {
+      const text = await response.text();
+      const result = parseJsonOrText(text);
+      if (response.ok && result.result !== false) {
+        return { response, finalMethod: "batch multipart" };
+      }
+
+      throw new Error(`/api/quiz/programming/batch 실패: HTTP ${response.status} ${formatResponse(result)}`);
+    });
+  }
+
+  function restoreProblemContents(quizInfo) {
+    return fetchGoorm("본문 복원 저장", "/quiz/edit", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(quizInfo)
+    }).then(async response => {
+      const text = await response.text();
+      const result = parseJsonOrText(text);
+      if (response.ok && result.result !== false) return response;
+      throw new Error(`/quiz/edit 실패: HTTP ${response.status} ${formatResponse(result)}`);
+    });
+  }
+
   function judgeLanguageConfig(language) {
     const versions = goormLanguageVersions();
     const buildOptions = goormAnswerBuildOptions();
@@ -805,23 +847,14 @@ function uploadAndCreateProblem(payload) {
         });
     })
     .then(({ quizInfo, inputBytes, outputBytes }) => {
-      const finalForm = new FormData();
-      finalForm.append("quizInfo", JSON.stringify(quizInfo));
-      finalForm.append("batchFile", batchFile);
-
-      return fetchGoorm("최종 batch 저장", "/api/quiz/programming/batch", {
-        method: "POST",
-        credentials: "include",
-        body: finalForm
-      }).then(async response => {
-        const text = await response.text();
-        const result = parseJsonOrText(text);
-        if (response.ok && result.result !== false) {
-          return { response, inputBytes, outputBytes, finalMethod: "batch multipart" };
-        }
-
-        throw new Error(`/api/quiz/programming/batch 실패: HTTP ${response.status} ${formatResponse(result)}`);
-      });
+      return saveBatchProblem(quizInfo, batchFile)
+        .then(({ response, finalMethod }) => ({ response, inputBytes, outputBytes, finalMethod }))
+        .catch(error => {
+          if (!/\/api\/quiz\/programming\/batch 실패: HTTP 500\b/.test(error.message)) throw error;
+          return saveBatchProblem(compactQuizInfoForBatch(quizInfo), batchFile)
+            .then(({ response }) => restoreProblemContents(quizInfo)
+              .then(() => ({ response, inputBytes, outputBytes, finalMethod: "batch multipart compact+edit" })));
+        });
     })
     .then(({ response, inputBytes, outputBytes, finalMethod }) => {
       if (!response.ok) {
